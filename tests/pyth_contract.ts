@@ -21,7 +21,7 @@ describe("pyth_contract", () => {
     const connection = new Connection("https://api.devnet.solana.com", "confirmed");
   });
 
-  it("Fetches the BTC/USD price from the Pyth price feed", async () => {
+  it("Fetches the SOL/USD price from the Pyth price feed", async () => {
     // Call the fetch_btc_price instruction in your program
     const tx = await program.methods
       .fetchBtcPrice()

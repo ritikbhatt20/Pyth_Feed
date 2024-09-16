@@ -6,7 +6,8 @@ use std::str::FromStr;
 // automatically when you build the project.
 declare_id!("2DqzEj6MjKGpgNZ9BhsfXi13owfHpaqxFTxYQyrXjYVR");
 
-const SOL_USDC_FEED: &str = "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J";
+const SOL_USDC_FEED: &str = "EdVCmQ9FSPcVe5YySXDPCRmc8aDQLKJ9xvYBMZPie1Vw";
+const STALENESS_THRESHOLD: u64 = 6000000; // staleness threshold in seconds
 
 #[program]
 mod pyth_contract {
@@ -45,8 +46,11 @@ pub fn fetch_pyth_price(price_feed_info: &AccountInfo) -> Result<f64> {
         .map_err(|_| ErrorCode::PriceFetchFailed)?;
 
     msg!("Price Feed: {:?}", price_feed);
-    
-    let price = price_feed.get_price_unchecked();
+
+    let current_timestamp = Clock::get()?.unix_timestamp;
+    let price = price_feed
+        .get_price_no_older_than(current_timestamp, STALENESS_THRESHOLD)
+        .ok_or(ErrorCode::PriceFetchFailed)?;
 
     // Convert price to dollars by adjusting with the `expo` value
     let price_in_dollars = (price.price as f64) * 10f64.powi(price.expo);
