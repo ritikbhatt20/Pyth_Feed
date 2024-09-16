@@ -4,10 +4,9 @@ use std::str::FromStr;
 
 // This is your program's public key and it will update
 // automatically when you build the project.
-declare_id!("42249qzKKgXW7MYno4xXMo9ryqzYo1jSUzFt3D4hgofe");
+declare_id!("2DqzEj6MjKGpgNZ9BhsfXi13owfHpaqxFTxYQyrXjYVR");
 
-const BTC_USDC_FEED: &str = "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J";
-const STALENESS_THRESHOLD: u64 = 60; // in seconds
+const BTC_USDC_FEED: &str = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix";
 
 #[program]
 mod pyth_contract {
@@ -15,7 +14,7 @@ mod pyth_contract {
     pub fn fetch_btc_price(ctx: Context<FetchBitcoinPrice>) -> Result<()> {
         // Fetch the latest price
         let price = fetch_pyth_price(&ctx.accounts.price_feed)?;
-
+        
         // Log the price to Solana's program logs
         msg!("BTC/USD price: {}", price);
 
@@ -27,6 +26,7 @@ mod pyth_contract {
 pub struct FetchBitcoinPrice<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
+    /// CHECK: This is safe
     #[account(address = Pubkey::from_str(BTC_USDC_FEED).unwrap() @ ErrorCode::InvalidPriceFeed)]
     pub price_feed: AccountInfo<'info>,
 }
@@ -40,8 +40,11 @@ pub enum ErrorCode {
 }
 
 pub fn fetch_pyth_price(price_feed_info: &AccountInfo) -> Result<i64> {
+    msg!("Price Feed Info: {:?}", price_feed_info);
     let price_feed = SolanaPriceAccount::account_info_to_feed(price_feed_info)
         .map_err(|_| ErrorCode::PriceFetchFailed)?;
+
+    msg!("Price Feed: {:?}", price_feed);
     
     let price = price_feed.get_price_unchecked();
     Ok(price.price)

@@ -1,8 +1,9 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PythContract } from "../target/types/pyth_contract";
-import { PublicKey, Keypair } from "@solana/web3.js";
-import { PriceUpdateAccount } from "@pythnetwork/pyth-solana-receiver/lib/PythSolanaReceiver";
+import { PublicKey, Keypair, Connection, SystemProgram } from "@solana/web3.js";
+import { getKeypairFromFile } from "@solana-developers/helpers";
+import { assert } from "chai";
 
 describe("pyth_contract", () => {
   // Set up provider and program
@@ -10,22 +11,32 @@ describe("pyth_contract", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.PythContract as Program<PythContract>;
 
-  // Pyth price account (replace with a valid account from Pyth)
-  const priceUpdateAccount = new PublicKey("YourPythPriceAccountHere");
+  let signer: anchor.web3.Keypair;
 
-  it("Fetches the Pyth price and logs it", async () => {
+  // Set up the Pyth price feed account (replace with actual Pyth account from Pyth Network)
+  const BTC_USDC_FEED = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
+
+  before(async () => {
     // Create a new keypair for the payer
-    const payer = Keypair.generate();
+    signer = await getKeypairFromFile("/home/ritikbhatt020/multi-token-escrow/keys/admin-CAT5qnvWfU9LQyprcLrXDMMifR6tL95nCrsNk8Mx12C7.json");
 
-    // Call the sample instruction
-    const tx = await program.methods.sample()
+    // Airdrop SOL to the payer to cover transaction fees
+    const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+  });
+
+  it("Fetches the BTC/USD price from the Pyth price feed", async () => {
+    // Call the fetch_btc_price instruction in your program
+    const tx = await program.methods
+      .fetchBtcPrice()
       .accounts({
-        payer: provider.wallet.publicKey,
-        priceUpdate: priceUpdateAccount,
+        signer: signer.publicKey,   // Use the connected wallet as the signer
       })
-      .signers([payer])
+      .signers([signer])
       .rpc();
 
     console.log("Transaction signature", tx);
+
+    // Add any necessary assertions here, for example:
+    // assert.ok(tx, "Transaction was successful");
   });
 });
