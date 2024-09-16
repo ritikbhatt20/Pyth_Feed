@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
-use pyth_sdk_solana::{load_price_feed_from_account_info};
+use pyth_sdk_solana::state::SolanaPriceAccount;
 use std::str::FromStr;
 
 // This is your program's public key and it will update
 // automatically when you build the project.
-declare_id!("6S31eyqebbTQP1FNWGymhnZMnu837og3d3GVrTs333PM");
+declare_id!("42249qzKKgXW7MYno4xXMo9ryqzYo1jSUzFt3D4hgofe");
 
 const BTC_USDC_FEED: &str = "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J";
 const STALENESS_THRESHOLD: u64 = 60; // in seconds
@@ -13,18 +13,12 @@ const STALENESS_THRESHOLD: u64 = 60; // in seconds
 mod pyth_contract {
     use super::*;
     pub fn fetch_btc_price(ctx: Context<FetchBitcoinPrice>) -> Result<()> {
-        // 1-Fetch latest price
-        let price_account_info = &ctx.accounts.price_feed;
-        let price_feed = load_price_feed_from_account_info(price_account_info).unwrap();
-        let current_timestamp = Clock::get()?.unix_timestamp;
-        let current_price = price_feed.get_price_no_older_than(current_timestamp, STALENESS_THRESHOLD).unwrap();
+        // Fetch the latest price
+        let price = fetch_pyth_price(&ctx.accounts.price_feed)?;
 
-        // 2-Format display values
-        let display_price = u64::try_from(current_price.price).unwrap() / 10u64.pow(u32::try_from(-current_price.expo).unwrap());
-        let display_confidence = u64::try_from(current_price.conf).unwrap() / 10u64.pow(u32::try_from(-current_price.expo).unwrap());
+        // Log the price to Solana's program logs
+        msg!("BTC/USD price: {}", price);
 
-        // 3-Log result
-        msg!("BTC/USD price: ({} +- {})", display_price, display_confidence);
         Ok(())
     }
 }
@@ -33,12 +27,22 @@ mod pyth_contract {
 pub struct FetchBitcoinPrice<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
-    #[account(address = Pubkey::from_str(BTC_USDC_FEED).unwrap() @ FeedError::InvalidPriceFeed)]
+    #[account(address = Pubkey::from_str(BTC_USDC_FEED).unwrap() @ ErrorCode::InvalidPriceFeed)]
     pub price_feed: AccountInfo<'info>,
 }
 
 #[error_code]
-pub enum FeedError {
+pub enum ErrorCode {
     #[msg("Invalid Price Feed")]
     InvalidPriceFeed,
+    #[msg("Price Fetch Failed")]
+    PriceFetchFailed,
+}
+
+pub fn fetch_pyth_price(price_feed_info: &AccountInfo) -> Result<i64> {
+    let price_feed = SolanaPriceAccount::account_info_to_feed(price_feed_info)
+        .map_err(|_| ErrorCode::PriceFetchFailed)?;
+    
+    let price = price_feed.get_price_unchecked();
+    Ok(price.price)
 }
