@@ -13,9 +13,6 @@ describe("pyth_contract", () => {
 
   let signer: anchor.web3.Keypair;
 
-  // Set up the Pyth price feed account (replace with actual Pyth account from Pyth Network)
-  const BTC_USDC_FEED = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
-
   before(async () => {
     // Create a new keypair for the payer
     signer = await getKeypairFromFile("/home/ritikbhatt020/multi-token-escrow/keys/admin-CAT5qnvWfU9LQyprcLrXDMMifR6tL95nCrsNk8Mx12C7.json");
